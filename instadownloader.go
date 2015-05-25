@@ -3,16 +3,16 @@ package instadownloader
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/nfnt/resize"
 	"image"
 	"image/jpeg"
+	"io"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
-	"math/rand"
-	"io"
 )
-
 
 type Image struct {
 	Width  int64
@@ -21,7 +21,7 @@ type Image struct {
 }
 
 type InstagramData struct {
-	Images      struct {
+	Images struct {
 		Standard Image `json:"standard_resolution"`
 		Low      Image `json:"low_resolution"`
 	}
@@ -33,7 +33,6 @@ type InstagramData struct {
 type Instagram struct {
 	Data []InstagramData
 }
-
 
 //Return list of urls to photos
 func GetLinksToPopularPhotos(clientid string) ([]string, error) {
@@ -65,16 +64,8 @@ func DownloadAndSave(links []string, outdir string) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if _, err := os.Stat(outdir); os.IsNotExist(err) {
-			os.Mkdir(outdir, 0777)
-		}
-		path := fmt.Sprintf("%s/%s.jpg", outdir, randName(5))
-		toimg, err := os.Create(path)
-		if err != nil {
-			panic(err)
-		}
-		jpeg.Encode(toimg, img, &jpeg.Options{jpeg.DefaultQuality})
-		toimg.Close()
+
+		createNewImage(img, outdir)
 	}
 	log.Println("Finished download data")
 }
@@ -89,7 +80,7 @@ func getImage(url string) (image.Image, error) {
 	return decodeImage(resp.Body)
 }
 
-func decodeImage(data io.ReadCloser)(image.Image, error) {
+func decodeImage(data io.ReadCloser) (image.Image, error) {
 	img, _, err := image.Decode(data)
 	if err != nil {
 		return nil, err
@@ -97,18 +88,41 @@ func decodeImage(data io.ReadCloser)(image.Image, error) {
 	return img, nil
 }
 
-//SaveWithNewSize provides download and saving photos from instagram with newsize
-func SaveWithNewSize(links[]string, outdir string, newwidth, newheight int) {
+//Store downloaded images on the disk
+func createNewImage(img image.Image, outdir string) {
+	if _, err := os.Stat(outdir); os.IsNotExist(err) {
+		os.Mkdir(outdir, 0777)
+	}
+	path := fmt.Sprintf("%s/%s.jpg", outdir, randName(5))
+	toimg, err := os.Create(path)
+	if err != nil {
+		panic(err)
+	}
+	jpeg.Encode(toimg, img, &jpeg.Options{jpeg.DefaultQuality})
+	toimg.Close()
+}
 
+//SaveWithNewSize provides download and saving photos from instagram with newsize
+func SaveWithNewSize(links []string, outdir string, newwidth, newheight int) {
+	log.Println("Start to download data")
+	for _, title := range links {
+		img, err := getImage(title)
+		if err != nil {
+			log.Fatal(err)
+		}
+		newimage := resize.Resize(uint(newwidth), uint(newheight), img, resize.Lanczos3)
+		createNewImage(newimage, outdir)
+	}
+	log.Println("Finished download data")
 }
 
 func randName(n int) string {
 	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-    b := make([]rune, n)
-    for i := range b {
-        b[i] = letters[rand.Intn(len(letters))]
-    }
-    return string(b)
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
 }
 
 //This private method provide download photos from instagram
