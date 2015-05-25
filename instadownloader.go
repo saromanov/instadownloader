@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"math/rand"
+	"io"
 )
 
 
@@ -60,16 +61,10 @@ func GetLinksByTag(clientid string, tag string) ([]string, error) {
 func DownloadAndSave(links []string, outdir string) {
 	log.Println("Start to download data")
 	for _, title := range links {
-		resp, err := http.Get(title)
+		img, err := getImage(title)
 		if err != nil {
-			log.Print("Can't download picture")
+			log.Fatal(err)
 		}
-		img, _, err := image.Decode(resp.Body)
-		if err != nil {
-			log.Print("Can't decode picture")
-		}
-		resp.Body.Close()
-
 		if _, err := os.Stat(outdir); os.IsNotExist(err) {
 			os.Mkdir(outdir, 0777)
 		}
@@ -82,6 +77,29 @@ func DownloadAndSave(links []string, outdir string) {
 		toimg.Close()
 	}
 	log.Println("Finished download data")
+}
+
+//Helpful method for getting images
+func getImage(url string) (image.Image, error) {
+	resp, err := http.Get(url)
+	defer resp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+	return decodeImage(resp.Body)
+}
+
+func decodeImage(data io.ReadCloser)(image.Image, error) {
+	img, _, err := image.Decode(data)
+	if err != nil {
+		return nil, err
+	}
+	return img, nil
+}
+
+//SaveWithNewSize provides download and saving photos from instagram with newsize
+func SaveWithNewSize(links[]string, outdir string, newwidth, newheight int) {
+
 }
 
 func randName(n int) string {
