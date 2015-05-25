@@ -2,9 +2,17 @@ package instadownloader
 
 import (
 	"testing"
+	"io/ioutil"
+	"image"
+	"os"
 )
 
 //client id took from http://tutorialzine.com/2014/07/5-practical-examples-for-learning-facebooks-react-framework/
+
+func readImage(path string)(image.Image, error) {
+	img, _ := os.Open(path)
+	return decodeImage(img)
+}
 
 func TestDownloadLinks(t *testing.T) {
 	links, err := GetLinksToPopularPhotos("642176ece1e7445e99244cec26f4de1f")
