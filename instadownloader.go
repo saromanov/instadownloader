@@ -12,6 +12,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"time"
 )
 
 type Image struct {
@@ -55,6 +56,30 @@ func GetLinksByTag(clientid string, tag string) ([]string, error) {
 	}
 	return getLinks(data), nil
 }
+
+//This method provides getting images by links and save it to target dir.
+//Note. If your list of tags will, for example {"cat", "dog", "bird"}
+//For all tag will create directory.
+func GetByTagsAndSave(clientid string, tags []string, dir string) {
+	_, err := os.Stat(dir)
+	if os.IsNotExist(err) {
+		os.Mkdir(dir, 0777)
+	}
+
+	if len(tags) == 0 {
+		return
+	}
+	for _, tag := range tags {
+		links, err := GetLinksByTag(clientid, tag)
+		if err != nil {
+			log.Println(err)
+		}
+		outdir := fmt.Sprintf("%s/%s", dir, tag)
+		DownloadAndSave(links, outdir)
+		time.Sleep(5 * time.Second)
+	}
+}
+
 
 //This method provides download saving data from output of GetLinksToPopularPhotos
 func DownloadAndSave(links []string, outdir string) {
