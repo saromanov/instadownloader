@@ -30,6 +30,13 @@ if err != nil {
 instadownloader.DownloadAndSave(result, "./outdir")
 ```
 
+Also, you can download by several tags
+```go
+
+instadownloader.GetByTagsAndSave("your id", []string{"dogs", "cats", "bird"}, "./images")
+
+```
+
 After downloading links, you can resize images
 ```go
 import (
